@@ -21,6 +21,51 @@ EOF
 chmod 600 ~/.config/last30days/.env
 ```
 
+## Configuration
+
+### X Data Source
+
+By default, the skill uses xAI API for X/Twitter search. Alternatively, you can use the **bird CLI** which accesses X via browser cookies (no API key needed):
+
+```bash
+# Option 1: xAI API (default)
+XAI_API_KEY=xai-...
+
+# Option 2: bird CLI (no API key needed)
+X_SOURCE=bird
+BIRD_COOKIE_SOURCE=safari  # or chrome, firefox
+```
+
+#### Setting up bird CLI
+
+1. **Install bird globally:**
+   ```bash
+   npm install -g @steipete/bird
+   ```
+
+2. **Verify it works:**
+   ```bash
+   bird whoami  # Should show your X account
+   ```
+
+3. **Configure last30days:**
+   ```bash
+   echo "X_SOURCE=bird" >> ~/.config/last30days/.env
+   echo "BIRD_COOKIE_SOURCE=safari" >> ~/.config/last30days/.env
+   ```
+
+Bird extracts cookies from your browser, so you must be logged into X in Safari/Chrome/Firefox.
+
+### All Configuration Options
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `OPENAI_API_KEY` | - | OpenAI API key for Reddit search |
+| `XAI_API_KEY` | - | xAI API key for X search (when X_SOURCE=xai) |
+| `X_SOURCE` | `xai` | X backend: `xai` (API) or `bird` (CLI) |
+| `BIRD_COOKIE_SOURCE` | `safari` | Browser for cookie extraction: `safari`, `chrome`, `firefox` |
+| `BIRD_ENRICH_RELEVANCE` | `false` | Enable Claude-powered relevance scoring for bird results |
+
 ## Usage
 
 ```
@@ -702,15 +747,19 @@ This example shows /last30days discovering **emerging developer workflows** - re
 ## Requirements
 
 - **OpenAI API key** - For Reddit research (uses web search)
-- **xAI API key** - For X research (optional but recommended)
+- **X data source** (one of the following):
+  - **xAI API key** - For X research via xAI API, or
+  - **bird CLI** - For X research via browser cookies (no API key needed)
 
-At least one key is required.
+At least one key is required. For X, you can use either xAI API or bird CLI.
 
 ## How It Works
 
 The skill uses:
 - OpenAI's Responses API with web search to find Reddit discussions
-- xAI's API with live X search to find posts
+- X search via one of:
+  - xAI's API with live X search (default)
+  - bird CLI with browser cookie authentication (alternative)
 - Real Reddit thread enrichment for engagement metrics
 - Scoring algorithm that weighs recency, relevance, and engagement
 

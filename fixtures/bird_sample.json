@@ -1,0 +1,65 @@
+{
+  "success": true,
+  "tweets": [
+    {
+      "id": "1881234567890123456",
+      "text": "Just discovered this amazing TypeScript pattern for handling async errors. Using discriminated unions with Result types makes error handling so much cleaner. No more try/catch everywhere!",
+      "author": {
+        "username": "typescript_dev",
+        "name": "TypeScript Developer"
+      },
+      "createdAt": "Mon Jan 20 14:30:00 +0000 2026",
+      "likeCount": 245,
+      "retweetCount": 67,
+      "replyCount": 23
+    },
+    {
+      "id": "1881234567890123457",
+      "text": "Hot take: Effect-TS is the future of TypeScript error handling. Once you go functional, you never go back. The type safety is incredible.",
+      "author": {
+        "username": "fp_enthusiast",
+        "name": "FP Enthusiast"
+      },
+      "createdAt": "Sun Jan 19 09:15:00 +0000 2026",
+      "likeCount": 189,
+      "retweetCount": 42,
+      "replyCount": 31
+    },
+    {
+      "id": "1881234567890123458",
+      "text": "Thread: Why I switched from Zod to Valibot for TypeScript validation 🧵\n\n1. Bundle size is 10x smaller\n2. Same type inference\n3. Tree-shakeable by default",
+      "author": {
+        "username": "webdev_tips",
+        "name": "Web Dev Tips"
+      },
+      "createdAt": "Sat Jan 18 16:45:00 +0000 2026",
+      "likeCount": 512,
+      "retweetCount": 128,
+      "replyCount": 45
+    },
+    {
+      "id": "1881234567890123459",
+      "text": "PSA: TypeScript 5.8 just dropped with major improvements to type narrowing. The new control flow analysis catches so many edge cases that used to slip through. Upgrade now!",
+      "author": {
+        "username": "ts_news",
+        "name": "TypeScript News"
+      },
+      "createdAt": "Fri Jan 17 11:00:00 +0000 2026",
+      "likeCount": 892,
+      "retweetCount": 234,
+      "replyCount": 67
+    },
+    {
+      "id": "1881234567890123460",
+      "text": "Controversial opinion: You don't need a state management library in 2026. React's built-in hooks + URL state + TanStack Query covers 95% of use cases. Fight me.",
+      "author": {
+        "username": "react_opinions",
+        "name": "React Hot Takes"
+      },
+      "createdAt": "Thu Jan 16 08:30:00 +0000 2026",
+      "likeCount": 1205,
+      "retweetCount": 312,
+      "replyCount": 189
+    }
+  ]
+}

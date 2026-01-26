@@ -27,6 +27,7 @@ SCRIPT_DIR = Path(__file__).parent.resolve()
 sys.path.insert(0, str(SCRIPT_DIR))
 
 from lib import (
+    bird_x,
     dates,
     dedupe,
     env,
@@ -158,6 +159,54 @@ def _search_x(
     return x_items, raw_xai, x_error
 
 
+def _search_x_bird(
+    topic: str,
+    config: dict,
+    from_date: str,
+    to_date: str,
+    depth: str,
+    mock: bool,
+) -> tuple:
+    """Search X via bird CLI (runs in thread).
+
+    Returns:
+        Tuple of (x_items, raw_bird, error)
+    """
+    raw_bird = None
+    x_error = None
+
+    if mock:
+        raw_bird = load_fixture("bird_sample.json")
+    else:
+        # Check if bird is available
+        available, err = bird_x.check_bird_available()
+        if not available:
+            return [], {"error": err}, err
+
+        try:
+            cookie_source = config.get("BIRD_COOKIE_SOURCE", "safari")
+            raw_bird = bird_x.search_x_bird(
+                topic,
+                from_date,
+                to_date,
+                depth=depth,
+                cookie_source=cookie_source,
+            )
+        except Exception as e:
+            raw_bird = {"error": str(e)}
+            x_error = f"{type(e).__name__}: {e}"
+
+    # Parse response
+    x_items = bird_x.parse_bird_response(raw_bird or {})
+
+    # Optionally enrich with Claude (outputs prompt for Claude to process)
+    if config.get("BIRD_ENRICH_RELEVANCE") and x_items:
+        # Store enrichment prompt for later output
+        raw_bird["_enrichment_prompt"] = bird_x.format_for_claude_enrichment(x_items, topic)
+
+    return x_items, raw_bird, x_error
+
+
 def run_research(
     topic: str,
     sources: str,
@@ -203,6 +252,9 @@ def run_research(
     reddit_future = None
     x_future = None
 
+    # Determine X backend: bird CLI or xAI API
+    use_bird = config.get("X_SOURCE", "xai") == "bird"
+
     with ThreadPoolExecutor(max_workers=2) as executor:
         # Submit both searches
         if run_reddit:
@@ -216,10 +268,18 @@ def run_research(
         if run_x:
             if progress:
                 progress.start_x()
-            x_future = executor.submit(
-                _search_x, topic, config, selected_models,
-                from_date, to_date, depth, mock
-            )
+            if use_bird:
+                # Use bird CLI for X search
+                x_future = executor.submit(
+                    _search_x_bird, topic, config,
+                    from_date, to_date, depth, mock
+                )
+            else:
+                # Use xAI API for X search
+                x_future = executor.submit(
+                    _search_x, topic, config, selected_models,
+                    from_date, to_date, depth, mock
+                )
 
         # Collect results
         if reddit_future:
@@ -448,6 +508,10 @@ def main():
 
     progress.end_processing()
 
+    # Determine X model/source for report
+    use_bird = config.get("X_SOURCE", "xai") == "bird"
+    xai_model_used = "bird-cli" if use_bird else selected_models.get("xai")
+
     # Create report
     report = schema.create_report(
         args.topic,
@@ -455,7 +519,7 @@ def main():
         to_date,
         mode,
         selected_models.get("openai"),
-        selected_models.get("xai"),
+        xai_model_used,
     )
     report.reddit = deduped_reddit
     report.x = deduped_x
@@ -474,8 +538,13 @@ def main():
     else:
         progress.show_complete(len(deduped_reddit), len(deduped_x))
 
+    # Get enrichment prompt if bird + enrichment enabled
+    enrichment_prompt = None
+    if use_bird and raw_xai and isinstance(raw_xai, dict):
+        enrichment_prompt = raw_xai.get("_enrichment_prompt")
+
     # Output result
-    output_result(report, args.emit, web_needed, args.topic, from_date, to_date, missing_keys)
+    output_result(report, args.emit, web_needed, args.topic, from_date, to_date, missing_keys, enrichment_prompt)
 
 
 def output_result(
@@ -486,6 +555,7 @@ def output_result(
     from_date: str = "",
     to_date: str = "",
     missing_keys: str = "none",
+    enrichment_prompt: str = None,
 ):
     """Output the result based on emit mode."""
     if emit_mode == "compact":
@@ -514,6 +584,14 @@ def output_result(
         print("After searching, synthesize WebSearch results WITH the Reddit/X")
         print("results above. WebSearch items should rank LOWER than comparable")
         print("Reddit/X items (they lack engagement metrics).")
+        print("="*60)
+
+    # Output Claude enrichment prompt if bird + enrichment enabled
+    if enrichment_prompt:
+        print("\n" + "="*60)
+        print("### CLAUDE RELEVANCE ENRICHMENT ###")
+        print("="*60)
+        print(enrichment_prompt)
         print("="*60)
 
 

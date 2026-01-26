@@ -44,9 +44,20 @@ def get_config() -> Dict[str, Any]:
         'OPENAI_MODEL_PIN': os.environ.get('OPENAI_MODEL_PIN') or file_env.get('OPENAI_MODEL_PIN'),
         'XAI_MODEL_POLICY': os.environ.get('XAI_MODEL_POLICY') or file_env.get('XAI_MODEL_POLICY', 'latest'),
         'XAI_MODEL_PIN': os.environ.get('XAI_MODEL_PIN') or file_env.get('XAI_MODEL_PIN'),
+        # Bird CLI configuration
+        'X_SOURCE': os.environ.get('X_SOURCE') or file_env.get('X_SOURCE', 'xai'),  # 'xai' or 'bird'
+        'BIRD_COOKIE_SOURCE': os.environ.get('BIRD_COOKIE_SOURCE') or file_env.get('BIRD_COOKIE_SOURCE', 'safari'),
+        'BIRD_ENRICH_RELEVANCE': _parse_bool(
+            os.environ.get('BIRD_ENRICH_RELEVANCE') or file_env.get('BIRD_ENRICH_RELEVANCE', 'false')
+        ),
     }
 
     return config
+
+
+def _parse_bool(value: str) -> bool:
+    """Parse a string value to boolean."""
+    return value.lower() in ('true', '1', 'yes', 'on')
 
 
 def config_exists() -> bool:
@@ -55,18 +66,25 @@ def config_exists() -> bool:
 
 
 def get_available_sources(config: Dict[str, Any]) -> str:
-    """Determine which sources are available based on API keys.
+    """Determine which sources are available based on API keys and configuration.
+
+    When X_SOURCE='bird', X is available via bird CLI (no XAI_API_KEY needed).
+    When X_SOURCE='xai' (default), X requires XAI_API_KEY.
 
     Returns: 'both', 'reddit', 'x', or 'web' (fallback when no keys)
     """
     has_openai = bool(config.get('OPENAI_API_KEY'))
     has_xai = bool(config.get('XAI_API_KEY'))
+    uses_bird = config.get('X_SOURCE', 'xai') == 'bird'
 
-    if has_openai and has_xai:
+    # When using bird CLI, X is available without XAI key
+    has_x = has_xai or uses_bird
+
+    if has_openai and has_x:
         return 'both'
     elif has_openai:
         return 'reddit'
-    elif has_xai:
+    elif has_x:
         return 'x'
     else:
         return 'web'  # Fallback: WebSearch only (no API keys needed)
@@ -75,16 +93,22 @@ def get_available_sources(config: Dict[str, Any]) -> str:
 def get_missing_keys(config: Dict[str, Any]) -> str:
     """Determine which API keys are missing.
 
+    When X_SOURCE='bird', X doesn't require XAI_API_KEY.
+
     Returns: 'both', 'reddit', 'x', or 'none'
     """
     has_openai = bool(config.get('OPENAI_API_KEY'))
     has_xai = bool(config.get('XAI_API_KEY'))
+    uses_bird = config.get('X_SOURCE', 'xai') == 'bird'
 
-    if has_openai and has_xai:
+    # When using bird CLI, we don't need XAI key for X
+    has_x_capability = has_xai or uses_bird
+
+    if has_openai and has_x_capability:
         return 'none'
     elif has_openai:
-        return 'x'  # Missing xAI key
-    elif has_xai:
+        return 'x'  # Missing xAI key (and not using bird)
+    elif has_x_capability:
         return 'reddit'  # Missing OpenAI key
     else:
         return 'both'  # Missing both keys
